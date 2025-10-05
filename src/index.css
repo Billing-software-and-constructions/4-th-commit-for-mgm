@@ -108,10 +108,17 @@ All colors MUST be HSL.
     left: 0;
     top: 0;
     width: 100%;
+    padding: 0.3cm 0.4cm;
   }
   
-  /* Remove default page margins */
+  /* Minimal page margins for compact printing */
   @page {
-    margin: 0.5cm;
+    margin: 0.2cm;
+    size: 80mm auto;
+  }
+  
+  /* Prevent page breaks within items */
+  .printable-bill > div {
+    page-break-inside: avoid;
   }
 }

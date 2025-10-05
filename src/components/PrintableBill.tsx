@@ -26,26 +26,26 @@ export const PrintableBill = ({
   grandTotal,
 }: PrintableBillProps) => {
   return (
-    <div className="printable-bill hidden print:block print:max-w-[80mm] print:mx-auto print:p-4 print:bg-white print:text-black print:font-mono print:text-xs">
+    <div className="printable-bill hidden print:block print:max-w-[80mm] print:mx-auto print:bg-white print:text-black print:font-mono print:text-xs">
       {/* Header */}
-      <div className="text-center mb-2">
-        <h1 className="text-base font-bold mb-1">MGM JEWELLERS</h1>
-        <p className="text-[10px] leading-tight">
+      <div className="text-center mb-1">
+        <h1 className="text-sm font-bold mb-0.5">MGM JEWELLERS</h1>
+        <p className="text-[9px] leading-tight">
           326, 1, Rajapalayam Main Road, Gomathiyapuram,
           <br />
           Sankarankoil, Tamil Nadu 627756
         </p>
       </div>
       
-      <div className="border-t-2 border-dashed border-black my-2"></div>
+      <div className="border-t border-dashed border-black my-1"></div>
 
       {/* Bill Info */}
-      <div className="mb-2 text-[11px]">
-        <div className="flex justify-between mb-1">
+      <div className="mb-1 text-[10px]">
+        <div className="flex justify-between mb-0.5">
           <span>Date: {format(new Date(), "dd/MM/yyyy")}</span>
           <span>Time: {format(new Date(), "hh:mm a")}</span>
         </div>
-        <div className="mb-1">
+        <div className="mb-0.5">
           <span>Customer: </span>
           <span className="font-semibold">{customerName}</span>
         </div>
@@ -55,10 +55,10 @@ export const PrintableBill = ({
         </div>
       </div>
       
-      <div className="border-t border-dashed border-black my-2"></div>
+      <div className="border-t border-dashed border-black my-1"></div>
 
       {/* Items Header */}
-      <div className="grid grid-cols-12 gap-1 text-[10px] font-bold mb-1">
+      <div className="grid grid-cols-12 gap-1 text-[9px] font-bold mb-0.5">
         <div className="col-span-4">ITEM</div>
         <div className="col-span-2 text-right">WT(g)</div>
         <div className="col-span-3 text-right">GOLD</div>
@@ -67,23 +67,23 @@ export const PrintableBill = ({
 
       {/* Items */}
       {billItems.map((item, index) => (
-        <div key={index} className="mb-2">
-          <div className="grid grid-cols-12 gap-1 text-[11px]">
+        <div key={index} className="mb-1">
+          <div className="grid grid-cols-12 gap-1 text-[10px]">
             <div className="col-span-4 font-semibold">{item.categoryName}</div>
             <div className="col-span-2 text-right">{item.weight}</div>
             <div className="col-span-3 text-right">₹{item.goldAmount.toLocaleString()}</div>
             <div className="col-span-3 text-right">
               ₹{item.seikuliAmount.toLocaleString()}
-              <div className="text-[9px]">(₹{item.seikuliRate}/g)</div>
+              <div className="text-[8px]">(₹{item.seikuliRate}/g)</div>
             </div>
           </div>
         </div>
       ))}
 
-      <div className="border-t border-dashed border-black my-2"></div>
+      <div className="border-t border-dashed border-black my-1"></div>
 
       {/* Totals */}
-      <div className="space-y-1 text-[11px]">
+      <div className="space-y-0.5 text-[10px]">
         <div className="flex justify-between">
           <span>Subtotal:</span>
           <span>₹{subtotal.toLocaleString()}</span>
@@ -93,19 +93,19 @@ export const PrintableBill = ({
           <span>₹{gstAmount.toLocaleString()}</span>
         </div>
         
-        <div className="border-t-2 border-black pt-1 mt-1">
-          <div className="flex justify-between text-[13px] font-bold">
+        <div className="border-t border-black pt-0.5 mt-0.5">
+          <div className="flex justify-between text-xs font-bold">
             <span>NET PAYABLE:</span>
             <span>₹{grandTotal.toLocaleString()}</span>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-dashed border-black my-2"></div>
+      <div className="border-t border-dashed border-black my-1"></div>
 
       {/* Footer */}
       <div className="text-center">
-        <p className="text-[11px] font-bold">THANK YOU, VISIT US AGAIN!</p>
+        <p className="text-[10px] font-bold">THANK YOU, VISIT US AGAIN!</p>
       </div>
     </div>
   );
