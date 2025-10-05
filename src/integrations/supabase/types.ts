@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      bill_items: {
+        Row: {
+          bill_id: string
+          category_id: string
+          category_name: string
+          created_at: string | null
+          gold_amount: number
+          id: string
+          seikuli_amount: number
+          seikuli_rate: number
+          total: number
+          weight: number
+        }
+        Insert: {
+          bill_id: string
+          category_id: string
+          category_name: string
+          created_at?: string | null
+          gold_amount: number
+          id?: string
+          seikuli_amount: number
+          seikuli_rate: number
+          total: number
+          weight: number
+        }
+        Update: {
+          bill_id?: string
+          category_id?: string
+          category_name?: string
+          created_at?: string | null
+          gold_amount?: number
+          id?: string
+          seikuli_amount?: number
+          seikuli_rate?: number
+          total?: number
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_items_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bill_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bills: {
+        Row: {
+          bill_date: string
+          created_at: string | null
+          customer_name: string
+          gold_rate: number
+          grand_total: number
+          gst_amount: number
+          gst_percentage: number
+          id: string
+          subtotal: number
+          updated_at: string | null
+        }
+        Insert: {
+          bill_date?: string
+          created_at?: string | null
+          customer_name: string
+          gold_rate: number
+          grand_total: number
+          gst_amount: number
+          gst_percentage: number
+          id?: string
+          subtotal: number
+          updated_at?: string | null
+        }
+        Update: {
+          bill_date?: string
+          created_at?: string | null
+          customer_name?: string
+          gold_rate?: number
+          grand_total?: number
+          gst_amount?: number
+          gst_percentage?: number
+          id?: string
+          subtotal?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
