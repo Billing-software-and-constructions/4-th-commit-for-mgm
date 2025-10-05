@@ -26,7 +26,7 @@ export const PrintableBill = ({
   grandTotal,
 }: PrintableBillProps) => {
   return (
-    <div className="printable-bill hidden print:block print:max-w-[80mm] print:mx-auto print:bg-white print:text-black print:font-mono print:text-xs">
+    <div className="printable-bill hidden print:block print:w-[80mm] print:mx-auto print:bg-white print:text-black print:font-mono print:text-xs">
       {/* Header */}
       <div className="text-center mb-1">
         <h1 className="text-sm font-bold mb-0.5">MGM JEWELLERS</h1>
