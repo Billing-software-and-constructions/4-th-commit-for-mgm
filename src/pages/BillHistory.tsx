@@ -226,6 +226,15 @@ const BillHistory = () => {
                             mode="single"
                             selected={startDate}
                             onSelect={(date) => handleDateChange(date, true)}
+                            month={startDate}
+                            onMonthChange={(newMonth) => {
+                              if (newMonth) {
+                                const yearFromMonth = getYear(newMonth);
+                                if (yearFromMonth !== selectedYear) {
+                                  setSelectedYear(yearFromMonth);
+                                }
+                              }
+                            }}
                             initialFocus
                             className="pointer-events-auto"
                           />
@@ -254,6 +263,15 @@ const BillHistory = () => {
                             mode="single"
                             selected={endDate}
                             onSelect={(date) => handleDateChange(date, false)}
+                            month={endDate}
+                            onMonthChange={(newMonth) => {
+                              if (newMonth) {
+                                const yearFromMonth = getYear(newMonth);
+                                if (yearFromMonth !== selectedYear) {
+                                  setSelectedYear(yearFromMonth);
+                                }
+                              }
+                            }}
                             initialFocus
                             className="pointer-events-auto"
                           />
