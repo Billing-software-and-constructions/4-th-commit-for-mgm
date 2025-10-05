@@ -92,36 +92,33 @@ All colors MUST be HSL.
   }
 }
 
-/* Print styles - show only the printable bill and collapse everything else */
+/* Print styles - hide everything except the bill */
 @media print {
-  html, body {
-    margin: 0 !important;
-    padding: 0 !important;
+  body * {
+    visibility: hidden;
   }
-
-  /* Collapse all layout */
-  body *:not(.printable-bill):not(.printable-bill *) {
-    display: none !important;
-  }
-
-  /* Ensure bill is visible and sized correctly */
-  .printable-bill {
-    display: block !important;
-    width: 80mm !important;
-    margin: 0 auto !important;
-    padding: 0.3cm 0.4cm !important;
-  }
+  
+  .printable-bill,
   .printable-bill * {
-    visibility: visible !important;
+    visibility: visible;
   }
-
-  /* Page setup */
+  
+  .printable-bill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0.3cm 0.4cm;
+  }
+  
+  /* Minimal page margins for compact printing */
   @page {
-    size: 80mm auto;
     margin: 0.2cm;
+    size: 80mm auto;
   }
-
-  /* Keep sections intact, allow breaks between items */
-  .printable-bill > div { page-break-inside: avoid; }
+  
+  /* Prevent page breaks within items */
+  .printable-bill > div {
+    page-break-inside: avoid;
+  }
 }
-
