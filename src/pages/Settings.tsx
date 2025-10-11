@@ -10,10 +10,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 interface Category {
   id: string;
   name: string;
   seikuli_rate: number;
+}
+
+interface Subcategory {
+  id: string;
+  name: string;
+  category_id: string;
 }
 const Settings = () => {
   const [goldRate, setGoldRate] = useState("");
@@ -30,11 +38,25 @@ const Settings = () => {
     id: string;
     name: string;
   } | null>(null);
+  
+  // Subcategory states
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [newSubcategory, setNewSubcategory] = useState("");
+  const [selectedCategoryForSub, setSelectedCategoryForSub] = useState("");
+  const [editingSubcategoryId, setEditingSubcategoryId] = useState<string | null>(null);
+  const [editSubcategoryName, setEditSubcategoryName] = useState("");
+  const [editSubcategoryCategoryId, setEditSubcategoryCategoryId] = useState("");
+  const [showDeleteSubDialog, setShowDeleteSubDialog] = useState(false);
+  const [subcategoryToDelete, setSubcategoryToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Fetch initial data
   useEffect(() => {
     fetchSettings();
     fetchCategories();
+    fetchSubcategories();
 
     // Set up real-time subscriptions
     const settingsChannel = supabase.channel('settings-changes').on('postgres_changes', {
@@ -51,9 +73,17 @@ const Settings = () => {
     }, () => {
       fetchCategories();
     }).subscribe();
+    const subcategoriesChannel = supabase.channel('subcategories-changes').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'subcategories'
+    }, () => {
+      fetchSubcategories();
+    }).subscribe();
     return () => {
       supabase.removeChannel(settingsChannel);
       supabase.removeChannel(categoriesChannel);
+      supabase.removeChannel(subcategoriesChannel);
     };
   }, []);
   const fetchSettings = async () => {
@@ -79,6 +109,18 @@ const Settings = () => {
       return;
     }
     setCategories(categoriesData || []);
+  };
+
+  const fetchSubcategories = async () => {
+    const {
+      data: subcategoriesData,
+      error: subcategoriesError
+    } = await supabase.from('subcategories').select('*').order('name');
+    if (subcategoriesError) {
+      console.error('Error fetching subcategories:', subcategoriesError);
+      return;
+    }
+    setSubcategories(subcategoriesData || []);
   };
   const handleSaveRates = async () => {
     const {
@@ -162,6 +204,83 @@ const Settings = () => {
     setEditingCategoryId(null);
     setEditCategoryName("");
     setEditCategorySeikuli("");
+  };
+
+  // Subcategory handlers
+  const handleAddSubcategory = async () => {
+    if (!newSubcategory.trim() || !selectedCategoryForSub) {
+      toast.error("Please enter subcategory name and select a category");
+      return;
+    }
+    const {
+      error
+    } = await supabase.from('subcategories').insert({
+      name: newSubcategory,
+      category_id: selectedCategoryForSub
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      const addedSubcategoryName = newSubcategory;
+      setNewSubcategory("");
+      setSelectedCategoryForSub("");
+      toast.success(`${addedSubcategoryName} has been added successfully.`);
+    }
+  };
+
+  const handleDeleteSubClick = (subcategory: Subcategory) => {
+    setSubcategoryToDelete({
+      id: subcategory.id,
+      name: subcategory.name
+    });
+    setShowDeleteSubDialog(true);
+  };
+
+  const handleDeleteSubcategory = async () => {
+    if (!subcategoryToDelete) return;
+    const {
+      error
+    } = await supabase.from('subcategories').delete().eq('id', subcategoryToDelete.id);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(`${subcategoryToDelete.name} has been removed successfully.`);
+    }
+    setShowDeleteSubDialog(false);
+    setSubcategoryToDelete(null);
+  };
+
+  const handleEditSubcategory = (subcategory: Subcategory) => {
+    setEditingSubcategoryId(subcategory.id);
+    setEditSubcategoryName(subcategory.name);
+    setEditSubcategoryCategoryId(subcategory.category_id);
+  };
+
+  const handleUpdateSubcategory = async (id: string) => {
+    if (!editSubcategoryName.trim() || !editSubcategoryCategoryId) {
+      toast.error("Please enter subcategory name and select a category");
+      return;
+    }
+    const {
+      error
+    } = await supabase.from('subcategories').update({
+      name: editSubcategoryName,
+      category_id: editSubcategoryCategoryId
+    }).eq('id', id);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setEditingSubcategoryId(null);
+      setEditSubcategoryName("");
+      setEditSubcategoryCategoryId("");
+      toast.success("Subcategory has been updated successfully.");
+    }
+  };
+
+  const handleCancelSubEdit = () => {
+    setEditingSubcategoryId(null);
+    setEditSubcategoryName("");
+    setEditSubcategoryCategoryId("");
   };
   return <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -267,6 +386,100 @@ const Settings = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Subcategories Section */}
+                <Card className="border-0 shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Subcategories</CardTitle>
+                    <CardDescription>Manage subcategories under each category</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Add Subcategory */}
+                    <div className="space-y-2">
+                      <Label>Add New Subcategory</Label>
+                      <div className="flex gap-2">
+                        <Select value={selectedCategoryForSub} onValueChange={setSelectedCategoryForSub}>
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map(cat => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input placeholder="Subcategory name" value={newSubcategory} onChange={e => setNewSubcategory(e.target.value)} onKeyPress={e => e.key === "Enter" && !e.shiftKey && handleAddSubcategory()} />
+                        <Button onClick={handleAddSubcategory} className="gap-2 whitespace-nowrap">
+                          <Plus className="h-4 w-4" />
+                          Add Subcategory
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Display Subcategories grouped by category */}
+                    <div className="space-y-4">
+                      {categories.map(category => {
+                        const categorySubcategories = subcategories.filter(sub => sub.category_id === category.id);
+                        if (categorySubcategories.length === 0) return null;
+                        
+                        return (
+                          <div key={category.id} className="space-y-2">
+                            <h3 className="font-semibold text-sm text-muted-foreground">{category.name}</h3>
+                            <div className="space-y-2">
+                              {categorySubcategories.map(subcategory => (
+                                <Card key={subcategory.id} className="border">
+                                  <CardContent className="pt-3 pb-3">
+                                    {editingSubcategoryId === subcategory.id ? (
+                                      <div className="space-y-3">
+                                        <div className="flex gap-2">
+                                          <Select value={editSubcategoryCategoryId} onValueChange={setEditSubcategoryCategoryId}>
+                                            <SelectTrigger className="w-[200px]">
+                                              <SelectValue placeholder="Select category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {categories.map(cat => (
+                                                <SelectItem key={cat.id} value={cat.id}>
+                                                  {cat.name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          <Input placeholder="Subcategory name" value={editSubcategoryName} onChange={e => setEditSubcategoryName(e.target.value)} />
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button onClick={() => handleUpdateSubcategory(subcategory.id)} size="sm">
+                                            Save
+                                          </Button>
+                                          <Button onClick={handleCancelSubEdit} variant="outline" size="sm">
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">{subcategory.name}</span>
+                                        <div className="flex gap-2">
+                                          <Button variant="ghost" size="icon" onClick={() => handleEditSubcategory(subcategory)}>
+                                            <Pencil className="h-4 w-4" />
+                                          </Button>
+                                          <Button variant="ghost" size="icon" onClick={() => handleDeleteSubClick(subcategory)} className="text-destructive hover:text-destructive">
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </main>
@@ -275,7 +488,7 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Category Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -287,6 +500,24 @@ const Settings = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteCategory} className="bg-red-600 hover:bg-red-700 text-gray-50">
+              Yes, Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Subcategory Confirmation Dialog */}
+      <AlertDialog open={showDeleteSubDialog} onOpenChange={setShowDeleteSubDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this subcategory?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{subcategoryToDelete?.name}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSubcategory} className="bg-red-600 hover:bg-red-700 text-gray-50">
               Yes, Delete
             </AlertDialogAction>
           </AlertDialogFooter>
