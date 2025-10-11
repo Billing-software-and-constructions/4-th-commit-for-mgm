@@ -13,7 +13,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 interface BillItem {
   id: string;
-  categoryId: string;
+  subcategoryId: string;
+  subcategoryName: string;
   categoryName: string;
   weight: number;
   goldAmount: number;
@@ -24,17 +25,25 @@ interface BillItem {
 interface Category {
   id: string;
   name: string;
+}
+
+interface Subcategory {
+  id: string;
+  name: string;
+  category_id: string;
   seikuli_rate: number;
 }
 const Billing = () => {
   const [goldRate, setGoldRate] = useState(0);
   const [gstPercentage, setGstPercentage] = useState(3);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [loading, setLoading] = useState(true);
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [currentItem, setCurrentItem] = useState({
     categoryId: "",
+    subcategoryId: "",
     weight: ""
   });
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -56,13 +65,21 @@ const Billing = () => {
     }, () => {
       fetchCategories();
     }).subscribe();
+    const subcategoriesChannel = supabase.channel('billing-subcategories').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'subcategories'
+    }, () => {
+      fetchSubcategories();
+    }).subscribe();
     return () => {
       supabase.removeChannel(settingsChannel);
       supabase.removeChannel(categoriesChannel);
+      supabase.removeChannel(subcategoriesChannel);
     };
   }, []);
   const fetchData = async () => {
-    await Promise.all([fetchSettings(), fetchCategories()]);
+    await Promise.all([fetchSettings(), fetchCategories(), fetchSubcategories()]);
     setLoading(false);
   };
   const fetchSettings = async () => {
@@ -82,27 +99,41 @@ const Billing = () => {
       setCategories(categoriesData);
     }
   };
+  
+  const fetchSubcategories = async () => {
+    const {
+      data: subcategoriesData
+    } = await supabase.from('subcategories').select('*').order('name');
+    if (subcategoriesData) {
+      setSubcategories(subcategoriesData);
+    }
+  };
   const handleAddItem = () => {
-    if (!currentItem.categoryId || !currentItem.weight) {
+    if (!currentItem.subcategoryId || !currentItem.weight) {
       toast.error("Please fill all item details");
       return;
     }
-    const category = categories.find(c => c.id === currentItem.categoryId);
+    const subcategory = subcategories.find(s => s.id === currentItem.subcategoryId);
+    if (!subcategory) return;
+    
+    const category = categories.find(c => c.id === subcategory.category_id);
     if (!category) return;
+
     const weight = parseFloat(currentItem.weight);
     const goldAmount = weight * goldRate;
-    const seikuliAmount = weight * category.seikuli_rate;
+    const seikuliAmount = weight * subcategory.seikuli_rate;
     const total = goldAmount + seikuliAmount;
     if (editingItemId) {
       // Update existing item
       const updatedItems = billItems.map(item => item.id === editingItemId ? {
         id: item.id,
-        categoryId: category.id,
+        subcategoryId: subcategory.id,
+        subcategoryName: subcategory.name,
         categoryName: category.name,
         weight,
         goldAmount,
         seikuliAmount,
-        seikuliRate: category.seikuli_rate,
+        seikuliRate: subcategory.seikuli_rate,
         total
       } : item);
       setBillItems(updatedItems);
@@ -112,12 +143,13 @@ const Billing = () => {
       // Add new item
       const newItem: BillItem = {
         id: Date.now().toString(),
-        categoryId: category.id,
+        subcategoryId: subcategory.id,
+        subcategoryName: subcategory.name,
         categoryName: category.name,
         weight,
         goldAmount,
         seikuliAmount,
-        seikuliRate: category.seikuli_rate,
+        seikuliRate: subcategory.seikuli_rate,
         total
       };
       setBillItems([...billItems, newItem]);
@@ -125,14 +157,17 @@ const Billing = () => {
     }
     setCurrentItem({
       categoryId: "",
+      subcategoryId: "",
       weight: ""
     });
   };
   const handleEditItem = (id: string) => {
     const itemToEdit = billItems.find(item => item.id === id);
     if (itemToEdit) {
+      const subcategory = subcategories.find(s => s.id === itemToEdit.subcategoryId);
       setCurrentItem({
-        categoryId: itemToEdit.categoryId,
+        categoryId: subcategory?.category_id || "",
+        subcategoryId: itemToEdit.subcategoryId,
         weight: itemToEdit.weight.toString()
       });
       setEditingItemId(id);
@@ -143,6 +178,7 @@ const Billing = () => {
     setEditingItemId(null);
     setCurrentItem({
       categoryId: "",
+      subcategoryId: "",
       weight: ""
     });
   };
@@ -176,8 +212,8 @@ const Billing = () => {
       // Save bill items
       const itemsToInsert = billItems.map(item => ({
         bill_id: (billData as any).id,
-        category_id: item.categoryId,
-        category_name: item.categoryName,
+        category_id: item.subcategoryId,
+        category_name: item.subcategoryName,
         weight: item.weight,
         gold_amount: item.goldAmount,
         seikuli_amount: item.seikuliAmount,
@@ -263,27 +299,52 @@ const Billing = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <Label htmlFor="category" className="text-sm">Category</Label>
-                          <Select value={currentItem.categoryId} onValueChange={value => setCurrentItem({
-                          ...currentItem,
-                          categoryId: value
-                        })}>
+                          <Select value={currentItem.categoryId} onValueChange={value => {
+                            setCurrentItem({
+                              ...currentItem,
+                              categoryId: value,
+                              subcategoryId: ""
+                            });
+                          }}>
                             <SelectTrigger className="h-9">
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
                               {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>
-                                  {cat.name} (₹{cat.seikuli_rate}/g)
+                                  {cat.name}
                                 </SelectItem>)}
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="weight" className="text-sm">Weight (grams)</Label>
-                          <Input id="weight" type="number" step="0.01" placeholder="2.5" value={currentItem.weight} onChange={e => setCurrentItem({
+                          <Label htmlFor="subcategory" className="text-sm">Subcategory</Label>
+                          <Select 
+                            value={currentItem.subcategoryId} 
+                            onValueChange={value => setCurrentItem({
+                              ...currentItem,
+                              subcategoryId: value
+                            })}
+                            disabled={!currentItem.categoryId}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Select subcategory" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {subcategories
+                                .filter(sub => sub.category_id === currentItem.categoryId)
+                                .map(sub => <SelectItem key={sub.id} value={sub.id}>
+                                  {sub.name} (₹{sub.seikuli_rate}/g)
+                                </SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="weight" className="text-sm">Weight (grams)</Label>
+                        <Input id="weight" type="number" step="0.01" placeholder="2.5" value={currentItem.weight} onChange={e => setCurrentItem({
                           ...currentItem,
                           weight: e.target.value
                         })} className="h-9" />
-                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button onClick={handleAddItem} className="flex-1 gap-2 h-9">
@@ -312,7 +373,7 @@ const Billing = () => {
                           {billItems.map(item => <div key={item.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                               <div className="flex-1 min-w-0">
                                 <div className="font-semibold text-base">
-                                  {item.categoryName}
+                                  {item.categoryName} - {item.subcategoryName}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-0.5">
                                   {item.weight}g • Gold: ₹{item.goldAmount.toLocaleString()} • Seikuli (₹{item.seikuliRate}/g): ₹{item.seikuliAmount.toLocaleString()}

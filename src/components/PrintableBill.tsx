@@ -4,6 +4,7 @@ interface PrintableBillProps {
   customerName: string;
   billItems: Array<{
     categoryName: string;
+    subcategoryName: string;
     weight: number;
     goldAmount: number;
     seikuliAmount: number;
@@ -69,7 +70,9 @@ export const PrintableBill = ({
       {billItems.map((item, index) => (
         <div key={index} className="mb-1">
           <div className="grid grid-cols-12 gap-1 text-[10px]">
-            <div className="col-span-4 font-semibold">{item.categoryName}</div>
+            <div className="col-span-4 font-semibold">
+              {item.categoryName} - {item.subcategoryName}
+            </div>
             <div className="col-span-2 text-right">{item.weight}</div>
             <div className="col-span-3 text-right">₹{item.goldAmount.toLocaleString()}</div>
             <div className="col-span-3 text-right">

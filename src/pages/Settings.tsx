@@ -15,24 +15,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface Category {
   id: string;
   name: string;
-  seikuli_rate: number;
 }
 
 interface Subcategory {
   id: string;
   name: string;
   category_id: string;
+  seikuli_rate: number;
 }
 const Settings = () => {
   const [goldRate, setGoldRate] = useState("");
   const [gstRate, setGstRate] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState("");
-  const [newCategorySeikuli, setNewCategorySeikuli] = useState("");
   const [loading, setLoading] = useState(true);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState("");
-  const [editCategorySeikuli, setEditCategorySeikuli] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<{
     id: string;
@@ -42,9 +40,11 @@ const Settings = () => {
   // Subcategory states
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [newSubcategory, setNewSubcategory] = useState("");
+  const [newSubcategorySeikuli, setNewSubcategorySeikuli] = useState("");
   const [selectedCategoryForSub, setSelectedCategoryForSub] = useState("");
   const [editingSubcategoryId, setEditingSubcategoryId] = useState<string | null>(null);
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
+  const [editSubcategorySeikuli, setEditSubcategorySeikuli] = useState("");
   const [editSubcategoryCategoryId, setEditSubcategoryCategoryId] = useState("");
   const [showDeleteSubDialog, setShowDeleteSubDialog] = useState(false);
   const [subcategoryToDelete, setSubcategoryToDelete] = useState<{
@@ -136,22 +136,20 @@ const Settings = () => {
     }
   };
   const handleAddCategory = async () => {
-    if (!newCategory.trim() || !newCategorySeikuli.trim()) {
-      toast.error("Please enter both category name and seikuli rate");
+    if (!newCategory.trim()) {
+      toast.error("Please enter category name");
       return;
     }
     const {
       error
     } = await supabase.from('categories').insert({
-      name: newCategory,
-      seikuli_rate: parseFloat(newCategorySeikuli)
+      name: newCategory
     });
     if (error) {
       toast.error(error.message);
     } else {
       const addedCategoryName = newCategory;
       setNewCategory("");
-      setNewCategorySeikuli("");
       toast.success(`${addedCategoryName} has been added successfully.`);
     }
   };
@@ -178,51 +176,49 @@ const Settings = () => {
   const handleEditCategory = (category: Category) => {
     setEditingCategoryId(category.id);
     setEditCategoryName(category.name);
-    setEditCategorySeikuli(category.seikuli_rate.toString());
   };
   const handleUpdateCategory = async (id: string) => {
-    if (!editCategoryName.trim() || !editCategorySeikuli.trim()) {
-      toast.error("Please enter both category name and seikuli rate");
+    if (!editCategoryName.trim()) {
+      toast.error("Please enter category name");
       return;
     }
     const {
       error
     } = await supabase.from('categories').update({
-      name: editCategoryName,
-      seikuli_rate: parseFloat(editCategorySeikuli)
+      name: editCategoryName
     }).eq('id', id);
     if (error) {
       toast.error(error.message);
     } else {
       setEditingCategoryId(null);
       setEditCategoryName("");
-      setEditCategorySeikuli("");
       toast.success("Category has been updated successfully.");
     }
   };
   const handleCancelEdit = () => {
     setEditingCategoryId(null);
     setEditCategoryName("");
-    setEditCategorySeikuli("");
   };
 
   // Subcategory handlers
   const handleAddSubcategory = async () => {
-    if (!newSubcategory.trim() || !selectedCategoryForSub) {
-      toast.error("Please enter subcategory name and select a category");
+    if (!newSubcategory.trim() || !newSubcategorySeikuli.trim() || !selectedCategoryForSub) {
+      toast.error("Please enter subcategory name, seikuli rate, and select a category");
       return;
     }
     const {
       error
     } = await supabase.from('subcategories').insert({
       name: newSubcategory,
-      category_id: selectedCategoryForSub
+      category_id: selectedCategoryForSub,
+      seikuli_rate: parseFloat(newSubcategorySeikuli)
     });
     if (error) {
       toast.error(error.message);
     } else {
       const addedSubcategoryName = newSubcategory;
       setNewSubcategory("");
+      setNewSubcategorySeikuli("");
       setSelectedCategoryForSub("");
       toast.success(`${addedSubcategoryName} has been added successfully.`);
     }
@@ -332,7 +328,7 @@ const Settings = () => {
                 <Card className="border-0 shadow-lg">
                   <CardHeader>
                     <CardTitle>Categories</CardTitle>
-                    <CardDescription>Manage product categories with their seikuli rates</CardDescription>
+                    <CardDescription>Manage product categories</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Add Category */}
@@ -340,7 +336,6 @@ const Settings = () => {
                       <Label>Add New Category</Label>
                       <div className="flex gap-2">
                         <Input placeholder="Category name" value={newCategory} onChange={e => setNewCategory(e.target.value)} onKeyPress={e => e.key === "Enter" && !e.shiftKey && handleAddCategory()} />
-                        <Input placeholder="Seikuli rate" type="number" value={newCategorySeikuli} onChange={e => setNewCategorySeikuli(e.target.value)} onKeyPress={e => e.key === "Enter" && !e.shiftKey && handleAddCategory()} className="max-w-[150px]" />
                         <Button onClick={handleAddCategory} className="gap-2 whitespace-nowrap">
                           <Plus className="h-4 w-4" />
                           Add Category
@@ -355,7 +350,6 @@ const Settings = () => {
                             {editingCategoryId === category.id ? <div className="space-y-3">
                                 <div className="flex gap-2">
                                   <Input placeholder="Category name" value={editCategoryName} onChange={e => setEditCategoryName(e.target.value)} />
-                                  <Input placeholder="Seikuli rate" type="number" value={editCategorySeikuli} onChange={e => setEditCategorySeikuli(e.target.value)} className="max-w-[150px]" />
                                 </div>
                                 <div className="flex gap-2">
                                   <Button onClick={() => handleUpdateCategory(category.id)} size="sm">
@@ -368,9 +362,6 @@ const Settings = () => {
                               </div> : <div className="flex items-start justify-between">
                                 <div>
                                   <h3 className="font-semibold text-lg">{category.name}</h3>
-                                  <p className="text-sm text-muted-foreground">
-                                    Seikuli Rate: ₹{category.seikuli_rate}/gram
-                                  </p>
                                 </div>
                                 <div className="flex gap-2">
                                   <Button variant="ghost" size="icon" onClick={() => handleEditCategory(category)}>
@@ -391,7 +382,7 @@ const Settings = () => {
                 <Card className="border-0 shadow-lg">
                   <CardHeader>
                     <CardTitle>Subcategories</CardTitle>
-                    <CardDescription>Manage subcategories under each category</CardDescription>
+                    <CardDescription>Manage subcategories with their seikuli rates</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Add Subcategory */}
@@ -411,6 +402,7 @@ const Settings = () => {
                           </SelectContent>
                         </Select>
                         <Input placeholder="Subcategory name" value={newSubcategory} onChange={e => setNewSubcategory(e.target.value)} onKeyPress={e => e.key === "Enter" && !e.shiftKey && handleAddSubcategory()} />
+                        <Input placeholder="Seikuli rate" type="number" value={newSubcategorySeikuli} onChange={e => setNewSubcategorySeikuli(e.target.value)} onKeyPress={e => e.key === "Enter" && !e.shiftKey && handleAddSubcategory()} className="max-w-[150px]" />
                         <Button onClick={handleAddSubcategory} className="gap-2 whitespace-nowrap">
                           <Plus className="h-4 w-4" />
                           Add Subcategory
@@ -447,6 +439,7 @@ const Settings = () => {
                                             </SelectContent>
                                           </Select>
                                           <Input placeholder="Subcategory name" value={editSubcategoryName} onChange={e => setEditSubcategoryName(e.target.value)} />
+                                          <Input placeholder="Seikuli rate" type="number" value={editSubcategorySeikuli} onChange={e => setEditSubcategorySeikuli(e.target.value)} className="max-w-[150px]" />
                                         </div>
                                         <div className="flex gap-2">
                                           <Button onClick={() => handleUpdateSubcategory(subcategory.id)} size="sm">
@@ -458,8 +451,13 @@ const Settings = () => {
                                         </div>
                                       </div>
                                     ) : (
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-medium">{subcategory.name}</span>
+                                      <div className="flex items-start justify-between">
+                                        <div>
+                                          <span className="font-semibold">{subcategory.name}</span>
+                                          <p className="text-sm text-muted-foreground">
+                                            Seikuli Rate: ₹{subcategory.seikuli_rate}/gram
+                                          </p>
+                                        </div>
                                         <div className="flex gap-2">
                                           <Button variant="ghost" size="icon" onClick={() => handleEditSubcategory(subcategory)}>
                                             <Pencil className="h-4 w-4" />
